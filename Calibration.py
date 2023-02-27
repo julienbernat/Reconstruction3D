@@ -4,31 +4,25 @@ import glob
 
 stereoChessboards = glob.glob("./StereoChessboards/*")
 
-#3D points of chessboard
-objPts = []
-
-#2D points of left and right image
-imgPtsL = []
-imgPtsR = []
-
-#Chssboard size
+#Chessboard size
 cbSize = (5, 7)
 criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 #Image size
 imgSize = [1314, 1027]
 
-#World coordinates for 3D points
-coord = np.zeros((cbSize[0]*cbSize[1], 3), np.float32)
-coord[:, :2] = np.mgrid[0:cbSize[0], 0:cbSize[1]].T.reshape(-1, 2)
-
-def getIntrinsicMatrix(imgPts):
-    retval, cameraMatrix, distCoeffs, rvecs, tvecs = cv.calibrateCamera(objPts, imgPts, imgSize, None, None)
-    optimalCameraMatrix, roi_L = cv.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, (imgSize[0], imgSize[1]), 1, (imgSize[0], imgSize[1]))
-    return  optimalCameraMatrix , distCoeffs
-
+#3D points of chessboard
+objPts = []
 
 def CalibrateCamera():
+    #World coordinates for 3D points
+    coord = np.zeros((cbSize[0]*cbSize[1], 3), np.float32)
+    coord[:, :2] = np.mgrid[0:cbSize[0], 0:cbSize[1]].T.reshape(-1, 2)
+
+    #2D points of left and right image
+    imgPtsL = []
+    imgPtsR = []
+
     for chessBoard in stereoChessboards:
         img = cv.imread(chessBoard)
 
@@ -74,4 +68,10 @@ def CalibrateCamera():
     print("\nDistorsion left:\n", distL)
     print("\nDistorsion right:\n", distR)
 
-    return fundamentalMatrix, intrinsicL
+    return fundamentalMatrix
+
+def getIntrinsicMatrix(imgPts):
+    retval, cameraMatrix, distCoeffs, rvecs, tvecs = cv.calibrateCamera(objPts, imgPts, imgSize, None, None)
+    optimalCameraMatrix, roi_L = cv.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, (imgSize[0], imgSize[1]), 1, (imgSize[0], imgSize[1]))
+    return  optimalCameraMatrix , distCoeffs
+

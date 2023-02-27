@@ -2,7 +2,51 @@ import numpy as np
 import cv2 as cv
 from Utils import ConstructWindow, drawdot, drawdotline
 
-test = "./StereoChessboards/stereo0.png"
+
+def Matching(F, fileNumber):
+    test = "./StereoImages/image" + str(fileNumber) + ".png"
+
+    confidenceBound = 0.35
+    windowsize = 60 
+    dispariteMax = 500
+
+    img = cv.imread(test, 0)
+
+    moitier = len(img[0])/2
+    imgG = img[:, :int(moitier)]
+    imgD = img[:, int(moitier):]
+
+    edgesG = cv.Canny(imgG, 120, 120)
+    edgesD = cv.Canny(imgD, 120, 120)
+
+    cv.imwrite("./result/filtreCanny.jpg", cv.hconcat([edgesG, edgesD]))
+
+    sift = cv.SIFT_create()
+    keypointsG, waste1 = sift.detectAndCompute(edgesG, None)
+    keypointsD, waste2 = sift.detectAndCompute(edgesD, None)
+
+    coordoPtsG = np.int32([k.pt for k in keypointsG])
+    coordoPtsD = np.int32([k.pt for k in keypointsD])
+    nbPtsG = len(coordoPtsG)
+    nbPtsD = len(coordoPtsD)
+    print("found (", nbPtsG,",",nbPtsD, ") points d'interet")
+    print("for example: ", coordoPtsD[nbPtsD-3])
+
+    imgggg, imgddd = drawdot(edgesG, edgesD, coordoPtsG, coordoPtsD)
+    imggg, imgdd = drawdot(imgG, imgD, coordoPtsG, coordoPtsD)
+    cv.imwrite("./result/pointsInteretCanny.jpg", cv.hconcat([imgggg, imgddd]))
+    cv.imwrite("./result/pointsdinteresimg.jpg", cv.hconcat([imggg, imgdd]))
+
+    matchedptsG, matchedptsD, aberrantG, aberrantD = FindMatches(imgG, imgD, coordoPtsG, coordoPtsD, windowsize,dispariteMax,confidenceBound)
+
+    resG, resD = drawdotline(imgG, imgD, matchedptsG,matchedptsD)
+    disG, disD = drawdotline(imgG, imgD, aberrantG, aberrantD)
+    cv.imwrite("./result/correlationmatchin.jpg", cv.hconcat([resG, resD]))
+    cv.imwrite("./result/correlationaberant.jpg", cv.hconcat([disG, disD]))
+
+    cv.destroyAllWindows()
+
+    return imgG, imgD, matchedptsG, matchedptsD
 
 def FindSinglePoint(imgG, imgD, pt, pointsD, boxsize, disparityMax):
     # pour chaque poits Gauche
@@ -66,45 +110,4 @@ def FindMatches(imgG, imgD, pointsG, pointsD, boxsize, disparityMax, confidenceB
 
     return matchedptsG, matchedptsD, abberantG, abberantD
 
-def Matching(F):
-    confidenceBound = 0.35
-    windowsize = 60 
-    dispariteMax = 500
 
-    img = cv.imread(test, 0)
-
-    moitier = len(img[0])/2
-    imgG = img[:, :int(moitier)]
-    imgD = img[:, int(moitier):]
-
-    edgesG = cv.Canny(imgG, 120, 120)
-    edgesD = cv.Canny(imgD, 120, 120)
-
-    cv.imwrite("./result/filtreCanny.jpg", cv.hconcat([edgesG, edgesD]))
-
-    sift = cv.SIFT_create()
-    keypointsG, waste1 = sift.detectAndCompute(edgesG, None)
-    keypointsD, waste2 = sift.detectAndCompute(edgesD, None)
-
-    coordoPtsG = np.int32([k.pt for k in keypointsG])
-    coordoPtsD = np.int32([k.pt for k in keypointsD])
-    nbPtsG = len(coordoPtsG)
-    nbPtsD = len(coordoPtsD)
-    print("found (", nbPtsG,",",nbPtsD, ") points d'interet")
-    print("for example: ", coordoPtsD[nbPtsD-3])
-
-    imgggg, imgddd = drawdot(edgesG, edgesD, coordoPtsG, coordoPtsD)
-    imggg, imgdd = drawdot(imgG, imgD, coordoPtsG, coordoPtsD)
-    cv.imwrite("./result/pointsInteretCanny.jpg", cv.hconcat([imgggg, imgddd]))
-    cv.imwrite("./result/pointsdinteresimg.jpg", cv.hconcat([imggg, imgdd]))
-
-    matchedptsG, matchedptsD, aberrantG, aberrantD = FindMatches(imgG, imgD, coordoPtsG, coordoPtsD, windowsize,dispariteMax,confidenceBound)
-
-    resG, resD = drawdotline(imgG, imgD, matchedptsG,matchedptsD)
-    disG, disD = drawdotline(imgG, imgD, aberrantG, aberrantD)
-    cv.imwrite("./result/correlationmatchin.jpg", cv.hconcat([resG, resD]))
-    cv.imwrite("./result/correlationaberant.jpg", cv.hconcat([disG, disD]))
-
-    cv.destroyAllWindows()
-
-    return imgG, imgD, matchedptsG, matchedptsD
