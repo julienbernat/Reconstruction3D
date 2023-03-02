@@ -2,8 +2,8 @@ import numpy as np
 import cv2 as cv
 
 def drawdot(img1,img2,pts1,pts2):
-    img1 = cv.cvtColor(img1,cv.COLOR_GRAY2BGR)
-    img2 = cv.cvtColor(img2,cv.COLOR_GRAY2BGR)
+    # img1 = cv.cvtColor(img1,cv.COLOR_GRAY2BGR)
+    # img2 = cv.cvtColor(img2,cv.COLOR_GRAY2BGR)
     for pt1,pt2 in zip(pts1,pts2):
         color = tuple(np.random.randint(0,255,3).tolist())
         img1 = cv.circle(img1,tuple(pt1),5,color,-1)

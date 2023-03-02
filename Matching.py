@@ -1,113 +1,60 @@
 import numpy as np
 import cv2 as cv
-from Utils import ConstructWindow, drawdot, drawdotline
+from Utils import drawlines
 
 
 def Matching(F, fileNumber):
-    test = "./StereoImages/image" + str(fileNumber) + ".png"
+    # Read image
+    imgName = "./StereoImages/image" + str(fileNumber) + ".png"
+    img = cv.imread(imgName)
 
-    confidenceBound = 0.35
-    windowsize = 60 
-    dispariteMax = 500
+    imgL = img[:, :int(len(img[0])/2)]
+    imgR = img[:, int(len(img[0])/2):]
 
-    img = cv.imread(test, 0)
-
-    moitier = len(img[0])/2
-    imgG = img[:, :int(moitier)]
-    imgD = img[:, int(moitier):]
-
-    edgesG = cv.Canny(imgG, 120, 120)
-    edgesD = cv.Canny(imgD, 120, 120)
-
-    cv.imwrite("./result/filtreCanny.jpg", cv.hconcat([edgesG, edgesD]))
-
+    # We use sift to calculate key points
     sift = cv.SIFT_create()
-    keypointsG, waste1 = sift.detectAndCompute(edgesG, None)
-    keypointsD, waste2 = sift.detectAndCompute(edgesD, None)
 
-    coordoPtsG = np.int32([k.pt for k in keypointsG])
-    coordoPtsD = np.int32([k.pt for k in keypointsD])
-    nbPtsG = len(coordoPtsG)
-    nbPtsD = len(coordoPtsD)
-    print("found (", nbPtsG,",",nbPtsD, ") points d'interet")
-    print("for example: ", coordoPtsD[nbPtsD-3])
+    # We can detect key points from the original image
+    kpL, desL = sift.detectAndCompute(imgL, None)
+    kpR, desR = sift.detectAndCompute(imgR, None)
 
-    imgggg, imgddd = drawdot(edgesG, edgesD, coordoPtsG, coordoPtsD)
-    imggg, imgdd = drawdot(imgG, imgD, coordoPtsG, coordoPtsD)
-    cv.imwrite("./result/pointsInteretCanny.jpg", cv.hconcat([imgggg, imgddd]))
-    cv.imwrite("./result/pointsdinteresimg.jpg", cv.hconcat([imggg, imgdd]))
+    # We draw keypoints over the original image
+    imgkpL = cv.drawKeypoints(imgL, kpL, 0, (0, 0, 255), None)
+    imgkpR = cv.drawKeypoints(imgR, kpR, 0, (0, 0, 255), None)
+    cv.imwrite("./result/keypoints.jpg", cv.hconcat([imgkpL, imgkpR]))
 
-    matchedptsG, matchedptsD, aberrantG, aberrantD = FindMatches(imgG, imgD, coordoPtsG, coordoPtsD, windowsize,dispariteMax,confidenceBound)
+    # We match key points together
+    bf = cv.BFMatcher()
+    matches = bf.knnMatch(desL, desR, k=2)
 
-    resG, resD = drawdotline(imgG, imgD, matchedptsG,matchedptsD)
-    disG, disD = drawdotline(imgG, imgD, aberrantG, aberrantD)
-    cv.imwrite("./result/correlationmatchin.jpg", cv.hconcat([resG, resD]))
-    cv.imwrite("./result/correlationaberant.jpg", cv.hconcat([disG, disD]))
+    good = []
 
-    cv.destroyAllWindows()
+    for m, n in matches:
+        if m.distance < 0.45*n.distance:
+            good.append([m])
 
-    return imgG, imgD, matchedptsG, matchedptsD
+    drawMatches = cv.drawMatchesKnn(imgL, kpL, imgR, kpR, good, None, flags=2)
+    cv.imwrite("./result/keypoints.jpg", drawMatches)
 
-def FindSinglePoint(imgG, imgD, pt, pointsD, boxsize, disparityMax):
-    # pour chaque poits Gauche
-    # creer une sousmatrice qui inclus le voisinage
+    ptsR = []
+    ptsL = []
 
-    template = ConstructWindow(imgG, pt, boxsize)
-        
-    
-    # evaluer tous les points Droits
-    maxCor = 0
-    match = (0,0)
+    for match in good:
+        pL = kpL[match[0].queryIdx].pt
+        pR = kpR[match[0].trainIdx].pt
 
-    for candidat in pointsD:
+        ptsR.append(pR)
+        ptsL.append(pL)
 
-        if (abs(pt[1] - candidat[1]) < 30) and (abs(pt[0] - candidat[0]) < disparityMax):
-                
-            sousFenetre = ConstructWindow(imgD, candidat, boxsize)
-            if(len(template) > len(sousFenetre)) or len(template[0]) > len(sousFenetre[0]):
-                tempTemplate = ConstructWindow(imgG, pt, min(int(len(sousFenetre)/2),int(len(sousFenetre[0])/2)))
+    # We compute Epilines
+    lines1 = cv.computeCorrespondEpilines(
+        np.array(ptsL).reshape(-1, 1, 2), 2, F)
+    lines1 = lines1.reshape(-1, 3)
 
+    epilines, original = drawlines(cv.cvtColor(imgL, cv.COLOR_BGR2GRAY), cv.cvtColor(
+        imgR, cv.COLOR_BGR2GRAY), lines1, np.int32(ptsL), np.int32(ptsR))
 
-                corMatrice = cv.matchTemplate(sousFenetre, tempTemplate, cv.TM_CCORR_NORMED)
-            else:    
-                corMatrice = cv.matchTemplate(sousFenetre, template, cv.TM_CCORR_NORMED)
-            cor = max(map(max, corMatrice))
-            if cor > maxCor:
-                maxCor = cor
-                match = candidat
-    return match, maxCor
+    cv.imwrite("./result/epipolarlins.jpg",
+               cv.hconcat([epilines, original]))
 
-def FindMatches(imgG, imgD, pointsG, pointsD, boxsize, disparityMax, confidenceBound):
-    matchedptsD = []
-    matchedptsG = []
-    abberantD = []
-    abberantG = []
-    it = 0
-    nb = 0
-    for pt in pointsG:
-        it += 1
-        #if(it%15==0):
-            #print(it)
-
-        match, maxCor = FindSinglePoint(imgG, imgD, pt, pointsD, boxsize, disparityMax)
-
-        #garder le maximum si un maximum est resonable
-        if(abs(pt[1] - match[1]) < 30) and (abs(pt[0] - match[0]) < disparityMax) and maxCor > confidenceBound:
-            matchedptsG.append(pt)
-            matchedptsD.append(match)
-            nb+=1
-            if(nb%100==0):
-                print("found ", nb, "matches so far")
-        else:
-            abberantG.append(pt)
-            abberantD.append(match)
-        
-    cv.destroyAllWindows()
-    np.int32(matchedptsD)
-    np.int32(matchedptsG)
-    np.int32(abberantG)
-    np.int32(abberantD)
-
-    return matchedptsG, matchedptsD, abberantG, abberantD
-
-
+    return imgL, imgR, good
