@@ -54,14 +54,14 @@ def CalibrateCamera():
 
     heightR, widthR, channelsR = imgR.shape
     retval, cameraMatrixR, distR, rvecs, tvecs = cv.calibrateCamera(
-        objPts, imgPtsR, imgSize, None, None)
+        objPts, imgPtsR, tuple(imgSize), None, None)
     intrinsicR, roi_R = cv.getOptimalNewCameraMatrix(
         cameraMatrixR, distR, (widthR, heightR), 1, (widthR, heightR))
 
     # Calculate intrisic  matrices
     heightL, widthL, channelsL = imgL.shape
     retval, cameraMatrixL, distL, rvecs, tvecs = cv.calibrateCamera(
-        objPts, imgPtsL, imgSize, None, None)
+        objPts, imgPtsL, tuple(imgSize), None, None)
     intrinsicL, roi_L = cv.getOptimalNewCameraMatrix(
         cameraMatrixL, distL, (widthL, heightL), 1, (widthL, heightL))
 
