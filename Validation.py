@@ -19,9 +19,9 @@ def CalibrationValidation(intrinsicL, intrinsicR, rot, trans, essential, fundame
     # Singular value decomposition de la matrice essentielle doit nous donner matrice Rotation & Matrice Translation
     # Matrice essentielle = M_intr_gauche * Mat_fond * M_intr_droite
 
-    m_ess = np.matmul(intrinsicL, np.matmul(fundamental, intrinsicR))
-    print(m_ess)
-    print("Does the essential matrix = intrisincLeft * fundamental * intrinsixR ? ", (np.allclose(m_ess, essential)))
+    # m_ess = np.matmul(intrinsicL, np.matmul(fundamental, intrinsicR))
+    # print(m_ess)
+    # print("Does the essential matrix = intrisincLeft * fundamental * intrinsixR ? ", (np.allclose(m_ess, essential)))
 
 def MatchingValidation(ptsR, ptsL, linesL, linesR, fundamental):
     # Le point trouvé à gauche * Matrice fondamentale * point trouvé à droite = 0 (epipolar constraint)
