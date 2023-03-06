@@ -4,28 +4,27 @@ from Utils import drawlines
 
 
 def CalculateDepth(fileNumber, intrinsicL, intrinsicR, distL, distR):
-    imgName = "./StereoImages/image" + str(fileNumber) + ".png"
+    # imgName = "./StereoImages/image" + str(fileNumber) + ".png"
+    imgName = "./StereoImages/Center38cm.png"
     img = cv.imread(imgName, 0)
 
-    moitier = len(img[0])/2
-    imgL = img[:, :int(moitier)]
-    imgR = img[:, int(moitier):]
+    imgLres = img[:, :int(len(img[0])/2)]
+    imgRres = img[:, int(len(img[0])/2):]
 
     # Compute undistorted images
-    imgLres = cv.undistort(imgL, intrinsicL, distL, None, None)
-    cv.imwrite("./result/undistortedL.jpg", cv.hconcat([imgL, imgLres]))
+    # imgLres = cv.undistort(imgL, intrinsicL, distL, None, None)
+    # cv.imwrite("./result/undistortedL.jpg", cv.hconcat([imgL, imgLres]))
 
-    imgRres = cv.undistort(imgR, intrinsicR, distR, None, None)
-    cv.imwrite("./result/undistortedR.jpg", cv.hconcat([imgR, imgRres]))
+    # imgRres = cv.undistort(imgR, intrinsicR, distR, None, None)
+    # cv.imwrite("./result/undistortedR.jpg", cv.hconcat([imgR, imgRres]))
 
     # We compute the depth and disparity map
-    minDisparity = 16
-    maxDisparity = 128
-    numDisparities = maxDisparity-minDisparity
-    blockSize = 3
-    disp12MaxDiff = 36
-    uniquenessRatio = 4
-    speckleWindowSize = 10000
+    minDisparity = 24
+    numDisparities = 184
+    blockSize = 1
+    disp12MaxDiff = 128
+    uniquenessRatio = 3
+    speckleWindowSize = 1000
     speckleRange = 100
 
     stereo = cv.StereoSGBM_create(minDisparity=minDisparity,
@@ -35,13 +34,14 @@ def CalculateDepth(fileNumber, intrinsicL, intrinsicR, distL, distR):
                                   uniquenessRatio=uniquenessRatio,
                                   speckleWindowSize=speckleWindowSize,
                                   speckleRange=speckleRange,
-                                  P1=16 * 3 * blockSize * blockSize,
-                                  P2=64 * 3 * blockSize * blockSize,
-                                  preFilterCap=30,
+                                  P1=6,
+                                  P2=140,
+                                  preFilterCap=1,
                                   )
     disparity = stereo.compute(imgLres, imgRres)
-    disparity = cv.normalize(disparity, disparity,
-                             alpha=255, beta=0, norm_type=cv.NORM_MINMAX)
-    disparity = np.uint8(disparity)
-    cv.imwrite("./result/disparity.jpg", cv.hconcat([disparity, imgLres]))
-    return disparity
+    normalized = cv.normalize(disparity, None,
+                              0, 255, norm_type=cv.NORM_MINMAX)
+    normalized = np.uint8(normalized)
+    cv.imwrite("./result/disparity.jpg", cv.hconcat([normalized, imgLres]))
+
+    return normalized
