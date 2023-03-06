@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 as cv
 from Utils import drawlines
-
+from Validation import MatchingValidation
 
 def Matching(F, fileNumber):
     # Read image
@@ -50,6 +50,12 @@ def Matching(F, fileNumber):
     lines1 = cv.computeCorrespondEpilines(
         np.array(ptsL).reshape(-1, 1, 2), 2, F)
     lines1 = lines1.reshape(-1, 3)
+
+    lines2 = cv.computeCorrespondEpilines(
+        np.array(ptsR).reshape(-1, 1, 2), 2, F)
+    lines2 = lines2.reshape(-1, 3)
+
+    MatchingValidation(ptsR, ptsL, lines1, lines2, F)
 
     epilines, original = drawlines(cv.cvtColor(imgL, cv.COLOR_BGR2GRAY), cv.cvtColor(
         imgR, cv.COLOR_BGR2GRAY), lines1, np.int32(ptsL), np.int32(ptsR))

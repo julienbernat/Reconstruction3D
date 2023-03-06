@@ -1,6 +1,7 @@
 import numpy as np
 import cv2 as cv
 import glob
+from Validation import CalibrationValidation
 
 stereoChessboards = glob.glob("./StereoChessboards/*")
 
@@ -75,6 +76,7 @@ def CalibrateCamera():
     retStereo, intrinsicL, distL, intrinsicR, distR, rot, trans, essentialMatrix, fundamentalMatrix = cv.stereoCalibrate(
         objPts, imgPtsL, imgPtsR, intrinsicL, distL, intrinsicR, distR, grayL.shape[::-1], criteria_stereo, flags)
 
+    CalibrationValidation(intrinsicL, intrinsicR, rot, trans, essentialMatrix, fundamentalMatrix)
     print("retval:\n", retStereo)
     print("\nRight camera intrinsic matrix:\n", intrinsicR)
     print("\nLeft camera intrinsic matrix:\n", intrinsicL)
