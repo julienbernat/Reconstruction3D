@@ -22,15 +22,15 @@ def CalibrateCamera():
     coord[:, :2] = np.mgrid[0:cbSize[0], 0:cbSize[1]].T.reshape(-1, 2)
 
     # 2D points of left and right image
-    imgPtsL = []
     imgPtsR = []
+    imgPtsL = []
 
     for chessBoard in stereoChessboards:
         img = cv.imread(chessBoard)
 
         # Separate left and right image
-        imgL = img[:, :int(len(img[0])/2)]
-        imgR = img[:, int(len(img[0])/2):]
+        imgR = img[:, :int(len(img[0])/2)]
+        imgL = img[:, int(len(img[0])/2):]
 
         # Find corners of the chessboard
         grayL = cv.cvtColor(imgL, cv.COLOR_BGR2GRAY)

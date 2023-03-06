@@ -5,7 +5,8 @@ from Validation import MatchingValidation
 
 def Matching(F, fileNumber):
     # Read image
-    imgName = "./StereoImages/image" + str(fileNumber) + ".png"
+    # imgName = "./StereoImages/image" + str(fileNumber) + ".png"
+    imgName = "./StereoImages/Center38cm.png"
     img = cv.imread(imgName)
 
     imgL = img[:, :int(len(img[0])/2)]
