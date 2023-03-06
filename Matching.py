@@ -3,6 +3,7 @@ import cv2 as cv
 from Utils import drawlines
 from Validation import MatchingValidation
 
+
 def Matching(F, fileNumber):
     # Read image
     # imgName = "./StereoImages/image" + str(fileNumber) + ".png"
@@ -61,7 +62,7 @@ def Matching(F, fileNumber):
     epilines, original = drawlines(cv.cvtColor(imgL, cv.COLOR_BGR2GRAY), cv.cvtColor(
         imgR, cv.COLOR_BGR2GRAY), lines1, np.int32(ptsL), np.int32(ptsR))
 
-    cv.imwrite("./result/epipolarlins.jpg",
+    cv.imwrite("./result/epipolarlines.jpg",
                cv.hconcat([epilines, original]))
 
     return imgL, imgR, good

@@ -22,15 +22,15 @@ def CalibrateCamera():
     coord[:, :2] = np.mgrid[0:cbSize[0], 0:cbSize[1]].T.reshape(-1, 2)
 
     # 2D points of left and right image
-    imgPtsR = []
     imgPtsL = []
+    imgPtsR = []
 
     for chessBoard in stereoChessboards:
         img = cv.imread(chessBoard)
 
         # Separate left and right image
-        imgR = img[:, :int(len(img[0])/2)]
-        imgL = img[:, int(len(img[0])/2):]
+        imgL = img[:, :int(len(img[0])/2)]
+        imgR = img[:, int(len(img[0])/2):]
 
         # Find corners of the chessboard
         grayL = cv.cvtColor(imgL, cv.COLOR_BGR2GRAY)
@@ -76,7 +76,8 @@ def CalibrateCamera():
     retStereo, intrinsicL, distL, intrinsicR, distR, rot, trans, essentialMatrix, fundamentalMatrix = cv.stereoCalibrate(
         objPts, imgPtsL, imgPtsR, intrinsicL, distL, intrinsicR, distR, grayL.shape[::-1], criteria_stereo, flags)
 
-    CalibrationValidation(intrinsicL, intrinsicR, rot, trans, essentialMatrix, fundamentalMatrix)
+    CalibrationValidation(intrinsicL, intrinsicR, rot,
+                          trans, essentialMatrix, fundamentalMatrix)
     print("retval:\n", retStereo)
     print("\nRight camera intrinsic matrix:\n", intrinsicR)
     print("\nLeft camera intrinsic matrix:\n", intrinsicL)
