@@ -25,7 +25,8 @@ def CalibrateCamera():
     coord[:, :2] = np.mgrid[0:cbSize[0], 0:cbSize[1]].T.reshape(-1, 2)
 
     for i,chessBoard in enumerate(stereoChessboards):
-        img = cv.imread(chessBoard)
+        img = cv.imread(chessBoard,3)
+
         cropped = ImagePreparation(img)
 
         # Separate left and right image
@@ -34,46 +35,41 @@ def CalibrateCamera():
 
         # Find corners of the chessboard
         grayL = cv.cvtColor(imgL, cv.COLOR_BGR2GRAY)
+        grayR = cv.cvtColor(imgR, cv.COLOR_BGR2GRAY)
+
         retL, cornersL = cv.findChessboardCorners(grayL, cbSize, cv.CALIB_CB_ADAPTIVE_THRESH + cv.CALIB_CB_FAST_CHECK + cv.CALIB_CB_NORMALIZE_IMAGE)
 
-        grayR = cv.cvtColor(imgR, cv.COLOR_BGR2GRAY)
         retR, cornersR = cv.findChessboardCorners(grayR, cbSize, cv.CALIB_CB_ADAPTIVE_THRESH + cv.CALIB_CB_FAST_CHECK + cv.CALIB_CB_NORMALIZE_IMAGE)
 
 
-        if retL == True:
-            objPtsL.append(coord)
-
+        if retL == True and retR ==True:
             # Add 2d image points of the chessboard corners
+            objPtsL.append(coord)
             cv.cornerSubPix(grayL, cornersL, (11, 11), (-1, -1), criteria)
             imgPtsL.append(cornersL)
             cv.drawChessboardCorners(imgL, cbSize, cornersL, retL)
 
-        if retR == True:
-            objPtsR.append(coord)
-
             # Add 2d image points of the chessboard corners
+            objPtsR.append(coord)
             cv.cornerSubPix(grayR, cornersR, (2, 2), (-1, -1), criteria)
             imgPtsR.append(cornersR)
             cv.drawChessboardCorners(imgR, cbSize, cornersR, retR)
-
-        cv.imwrite("./result/ChessboardCorners"+str(i)+".jpg", cv.hconcat([imgL, imgR]))
+        cv.imwrite("./ChessboardCorners/ChessboardCorners"+str(i)+".jpg", cv.hconcat([imgL, imgR]))
 
     # Calculate intrisic  matrices
-    heightL, widthL, channelsL = imgL.shape
-    print(widthL)
-    print(heightL)
+    heightL,widthL,channelsL = imgL.shape
+    sizeL = (widthL,heightL)
     retval, cameraMatrixL, distL, rvecs, tvecs = cv.calibrateCamera(
-        objPtsL, imgPtsL, (widthL,heightL), None, None)
+        objPtsL, imgPtsL, sizeL, None, None)
     intrinsicL, roi_L = cv.getOptimalNewCameraMatrix(
-        cameraMatrixL, distL, (widthL,heightL), 1, (widthL,heightL))
+        cameraMatrixL, distL, sizeL, 1, sizeL)
 
-    heightR, widthR, channelsR = imgR.shape
-    print(widthR)
-    print(heightR)
+    heightR,widthR,channelsR = imgR.shape
+    sizeR = (widthR,heightR)
     retval, cameraMatrixR, distR, rvecs, tvecs = cv.calibrateCamera(
-        objPtsR, imgPtsR, (widthR,heightR), None, None)
+        objPtsR, imgPtsR, sizeR, None, None)
     intrinsicR, roi_R = cv.getOptimalNewCameraMatrix(
-        cameraMatrixR, distR, (widthR,heightR), 1, (widthR,heightR))
+        cameraMatrixR, distR, sizeR, 1, sizeR)
 
 
     flags = 0
@@ -84,7 +80,7 @@ def CalibrateCamera():
 
     # Calculate fundamental and essential matrix with stereo calibration
     retStereo, intrinsicL, distL, intrinsicR, distR, rot, trans, essentialMatrix, fundamentalMatrix = cv.stereoCalibrate(
-        objPtsL, imgPtsL, imgPtsR, intrinsicL, distL, intrinsicR, distR, grayL.shape[::-1], criteria_stereo, flags)
+        objPtsL, imgPtsL, imgPtsR, intrinsicL, distL, intrinsicR, distR, sizeL, criteria_stereo, flags)
 
     CalibrationValidation(intrinsicL, intrinsicR, rot,
                           trans, essentialMatrix, fundamentalMatrix)
