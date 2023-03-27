@@ -25,18 +25,30 @@ def Matching(F, fileNumber):
     imgkpR = cv.drawKeypoints(imgR, kpR, 0, (0, 0, 255), None)
     cv.imwrite("./result/keypoints.jpg", cv.hconcat([imgkpL, imgkpR]))
 
-    # We match key points together
+    # # We match key points together
     bf = cv.BFMatcher()
     matches = bf.knnMatch(desL, desR, k=2)
 
     good = []
 
     for m, n in matches:
-        if m.distance < 0.45*n.distance:
+        if m.distance < 0.6 * n.distance:
             good.append([m])
 
     drawMatches = cv.drawMatchesKnn(imgL, kpL, imgR, kpR, good, None, flags=2)
     cv.imwrite("./result/keypoints.jpg", drawMatches)
+
+    # matcher = cv.DescriptorMatcher_create(cv.DescriptorMatcher_FLANNBASED)
+    # knn_matches = matcher.knnMatch(desL, desR, 2)
+    # ratio_thresh = 0.5
+    # good = []
+    # for m,n in knn_matches:
+    #     if m.distance < ratio_thresh * n.distance:
+    #         good.append(m)
+
+    # img_matches = np.empty((max(imgL.shape[0], imgR.shape[0]), imgL.shape[1]+imgR.shape[1], 3), dtype=np.uint8)
+    # drawMatches = cv.drawMatches(imgL, kpL, imgR, kpR, good, img_matches, flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    # cv.imwrite("./result/keypoints.jpg", drawMatches)
 
     ptsR = []
     ptsL = []
@@ -57,7 +69,7 @@ def Matching(F, fileNumber):
         np.array(ptsR).reshape(-1, 1, 2), 2, F)
     lines2 = lines2.reshape(-1, 3)
 
-    MatchingValidation(ptsR, ptsL, lines1, lines2, F)
+   # MatchingValidation(ptsR, ptsL, lines1, lines2, F)
 
     epilines, original = drawlines(cv.cvtColor(imgL, cv.COLOR_BGR2GRAY), cv.cvtColor(
         imgR, cv.COLOR_BGR2GRAY), lines1, np.int32(ptsL), np.int32(ptsR))

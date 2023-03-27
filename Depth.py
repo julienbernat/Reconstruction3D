@@ -2,7 +2,7 @@ import numpy as np
 import cv2 as cv
 
 
-def CalculateDisparity(img, intrinsicL,cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR):
+def CalculateDisparity(img, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR, leftEyePixels, rightEyePixels):
     # imgName = "./StereoImages/image" + str(fileNumber) + ".png"
 
 
@@ -15,6 +15,15 @@ def CalculateDisparity(img, intrinsicL,cameraMatrixL, intrinsicR, cameraMatrixR,
 
     imgRres = cv.undistort(imgR, cameraMatrixR, distR, None, intrinsicR)
     cv.imwrite("./result/undistortedR.jpg",imgRres)
+
+    # if len(imgL.shape) > 2:
+    #     col, row = imgLres.shape[:2]
+    # else:
+    #     col, row = imgLres.shape
+
+    # imgL_downSampled = cv.resize(imgLres, dsize=(row // 2, col // 2))
+    # imgR_downSampled = cv.resize(imgRres, dsize=(row //2, col // 2))
+
 
     # laplacianL = cv.Laplacian(imgLres,cv.CV_64F)
     # laplacianR = cv.Laplacian(imgRres,cv.CV_64F)
@@ -66,11 +75,33 @@ def CalculateDisparity(img, intrinsicL,cameraMatrixL, intrinsicR, cameraMatrixR,
     disparity = stereo.compute(imgLres, imgRres)
     # disparity = stereo.compute(grayL, grayR)
     # cv.imwrite("./result/disparity.jpg", disparity)
-    normalized = cv.normalize(disparity, None,
-                              0, 255, norm_type=cv.NORM_MINMAX)
     # cv.imwrite("./result/normalized.jpg", normalized)
+    normalized = cv.normalize(disparity, None,
+                              1, 255, norm_type=cv.NORM_MINMAX)
     normalized = np.uint8(normalized)
+    
+    f = cameraMatrixL[1, 1]
+    print(f)
+    depth = 62 * f / normalized
+    #leftEye
+    sumLeft = 0
+    for pixelCoord in leftEyePixels:
+        sumLeft += depth[pixelCoord[0]][pixelCoord[1]]
+    
+    #rightEye
+    sumRight = 0
+    for pixelCoord in leftEyePixels:
+        sumRight += depth[pixelCoord[0]][pixelCoord[1]]
+
+    distLeftEye = sumLeft / len(leftEyePixels)
+    distRightEye = sumRight / len(rightEyePixels)
+    font = cv.FONT_HERSHEY_SIMPLEX
+
+    cv.putText(img, 'left eye : ' + str(round(distLeftEye * 0.1, 3)) + " cm", (10,450), font, 1, (0, 255, 0), 2, cv.LINE_AA)
+    cv.putText(img, 'right eye : ' + str(round(distRightEye * 0.1, 3)) + " cm", (400,450), font, 1, (0, 255, 0), 2, cv.LINE_AA)
+    cv.imshow("img", img)
+    cv.waitKey(0)
     cv.imwrite("./result/depth.jpg", normalized)
-    blur = cv.medianBlur(normalized,7)
+    blur = cv.medianBlur(normalized, 5)
     cv.imwrite("./result/blur.jpg", blur)
     return blur

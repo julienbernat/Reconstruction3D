@@ -21,11 +21,11 @@ def CalibrateCamera():
     imgPtsR = []
 
     # World coordinates for 3D points
-    coord = np.zeros((cbSize[0]*cbSize[1], 3), np.float32)
+    coord = np.zeros((cbSize[0] * cbSize[1], 3), np.float32)
     coord[:, :2] = np.mgrid[0:cbSize[0], 0:cbSize[1]].T.reshape(-1, 2)
 
-    for i,chessBoard in enumerate(stereoChessboards):
-        img = cv.imread(chessBoard,3)
+    for i, chessBoard in enumerate(stereoChessboards):
+        img = cv.imread(chessBoard, 3)
 
         cropped = ImagePreparation(img)
 
@@ -57,8 +57,8 @@ def CalibrateCamera():
         cv.imwrite("./ChessboardCorners/ChessboardCorners"+str(i)+".jpg", cv.hconcat([imgL, imgR]))
 
     # Calculate intrisic  matrices
-    heightL,widthL,channelsL = imgL.shape
-    sizeL = (widthL,heightL)
+    heightL, widthL, channelsL = imgL.shape
+    sizeL = (widthL, heightL)
     retval, cameraMatrixL, distL, rvecs, tvecs = cv.calibrateCamera(
         objPtsL, imgPtsL, sizeL, None, None)
     intrinsicL, roi_L = cv.getOptimalNewCameraMatrix(
@@ -82,8 +82,8 @@ def CalibrateCamera():
     retStereo, intrinsicL, distL, intrinsicR, distR, rot, trans, essentialMatrix, fundamentalMatrix = cv.stereoCalibrate(
         objPtsL, imgPtsL, imgPtsR, intrinsicL, distL, intrinsicR, distR, sizeL, criteria_stereo, flags)
 
-    CalibrationValidation(intrinsicL, intrinsicR, rot,
-                          trans, essentialMatrix, fundamentalMatrix)
+    # CalibrationValidation(intrinsicL, intrinsicR, rot,
+    #                       trans, essentialMatrix, fundamentalMatrix)
     # print("retval:\n", retStereo)
     # print("\nRight camera intrinsic matrix:\n", intrinsicR)
     # print("\nLeft camera intrinsic matrix:\n", intrinsicL)
@@ -94,4 +94,4 @@ def CalibrateCamera():
     # print("\nDistorsion left:\n", distL)
     # print("\nDistorsion right:\n", distR)
 
-    return fundamentalMatrix, intrinsicL,cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR
+    return fundamentalMatrix, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR
