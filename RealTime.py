@@ -1,9 +1,15 @@
+from Calibration import CalibrateCamera
+from Matching import Matching
+from Depth import CalculateDepth
+from imagePreparation import ImagePreparation
+from EyesDetection import eyesDetection
 import cv2 as cv
-from Depth import CalculateDisparity
 
 def processFrame(frame,intrinsicL, intrinsicR, distL, distR):
-    depthMap = CalculateDisparity(frame,intrinsicL, intrinsicR, distL, distR)
-    cv.imshow("frame", depthMap)
+    leftEyePixelsLEFT, rightEyePixelsLEFT, leftEyePixelsRIGHT, rightEyePixelsRIGHT = eyesDetection(frame)
+
+    depth = CalculateDepth(frame, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR, leftEyePixelsLEFT, rightEyePixelsLEFT)    
+    cv.imshow("frame", depth)
   
 
 def realTimeCapture(intrinsicL, intrinsicR, distL, distR):
@@ -15,3 +21,10 @@ def realTimeCapture(intrinsicL, intrinsicR, distL, distR):
           break
   vid.release()
   cv.destroyAllWindows()
+
+if __name__ == "__main__":
+    fundamentalMatrix, intrinsicL,cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR = CalibrateCamera()
+
+
+
+    realTimeCapture(intrinsicL, intrinsicR, distL, distR)

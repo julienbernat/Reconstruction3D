@@ -1,6 +1,6 @@
 from Calibration import CalibrateCamera
 from Matching import Matching
-from Depth import CalculateDisparity
+from Depth import CalculateDepth
 from RealTime import realTimeCapture
 from imagePreparation import ImagePreparation
 from EyesDetection import eyesDetection
@@ -16,18 +16,15 @@ parser.add_argument("-f", "--file_number",
 
 if __name__ == "__main__":
     fundamentalMatrix, intrinsicL,cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR = CalibrateCamera()
-    imgG, imgD, matches, = Matching(
-        fundamentalMatrix, parser.parse_args().file_number)
 
+    # imgG, imgD, matches, = Matching(fundamentalMatrix, parser.parse_args().file_number)
     imgName = "./StereoImages/Center38cm.png"
     img = cv.imread(imgName, 3)
+    eyesImg = cv.imread(imgName, 3)
 
-    # cv.imwrite("./result/original.jpg", img)
     cropped = ImagePreparation(img)
-    img_landmarks = cropped
-    leftEyePixelsLEFT, rightEyePixelsLEFT, leftEyePixelsRIGHT, rightEyePixelsRIGHT = eyesDetection(img_landmarks)
-    CalculateDisparity(cropped, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR, leftEyePixelsLEFT, rightEyePixelsLEFT)
-    
-    # realTimeCapture(intrinsicL, intrinksicR, distL, distR)
+    croppedEyes = ImagePreparation(eyesImg)
 
+    leftEyePixelsLEFT, rightEyePixelsLEFT, leftEyePixelsRIGHT, rightEyePixelsRIGHT = eyesDetection(croppedEyes)
 
+    CalculateDepth(cropped, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR, leftEyePixelsLEFT, rightEyePixelsLEFT)

@@ -18,7 +18,6 @@ def eyesDetection(img):
 
     # LEFT IMAGE
     ih, iw, ic = imgL.shape
-    print(imgL.shape)
     faceMeshSolution = mp.solutions.face_mesh
     faceMesh = faceMeshSolution.FaceMesh(max_num_faces=1) # 2 faces because of 2 cameras..
     results = faceMesh.process(imgL)
@@ -58,5 +57,6 @@ def eyesDetection(img):
                     x, y= int(landmark.x * iw), int(landmark.y * ih)
                     leftEyePixelRIGHT.append((x, y))
                     cv.circle(imgR, (x, y), radius=1, color=(255, 255, 255), thickness=3)
-
+    
+    cv.imwrite("./result/eyes.jpg", img)
     return leftEyePixelLEFT, rightEyePixelLEFT, leftEyePixelRIGHT, rightEyePixelRIGHT
