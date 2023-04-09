@@ -30,8 +30,8 @@ def CalculateEyeDepth(pixels, depth):
 
     new_points = [(x[i], y[i]) for i in range(len(x))]
     for point in new_points:
-        res.append(round(depth[int(point[0])][int(point[1])],3))
-        cv.circle(depth, (int(point[0]), int(point[1])), radius=1, color=(255, 255, 255), thickness=3)
+        res.append(round(depth[int(point[1])][int(point[0])], 3))
+        cv.circle(depth, (int(point[1]), int(point[0])), radius=1, color=(255, 255, 255), thickness=3)
 
     median=np.median(res)
     average=np.average(res)
