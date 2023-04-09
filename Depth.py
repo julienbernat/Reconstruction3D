@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+import time
 import matplotlib.pyplot as plt
 
 class Formatter(object):
@@ -109,9 +110,12 @@ def Depth(disparity, cameraMatrixL, leftEyePixels, rightEyePixels):
     normalized = cv.normalize(depth, None,1, 255, norm_type=cv.NORM_MINMAX)
     normalized = np.uint8(normalized)
 
+    st = time.time()
     distLeftEye = CalculateEyeDepth(leftEyePixels,depth)
     distRightEye = CalculateEyeDepth(rightEyePixels,depth)
+    et = time.time()
 
+    print("Time to calculate depth for each eyes in seconds ", et - st)
     font = cv.FONT_HERSHEY_SIMPLEX
 
     cv.putText(depth, 'left eye : ' + str(round(distLeftEye, 3)) + " cm", (10,450), font, 1, (0, 255, 0), 2, cv.LINE_AA)
@@ -129,8 +133,11 @@ def CalculateDepth(img, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, di
 
     imgL, imgR = Undistort(imgL,imgR,cameraMatrixL, distL, intrinsicL, cameraMatrixR, distR, intrinsicR)
 
+    st = time.time()
     disparity = Disparity(imgL, imgR)
+    et = time.time()
 
+    print("Time to caculate disparity map in seconds ", et - st)
     depth = Depth(disparity, cameraMatrixL, leftEyePixels, rightEyePixels)
 
     # fig, ax = plt.subplots()
