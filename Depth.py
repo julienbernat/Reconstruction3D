@@ -32,7 +32,7 @@ def CalculateEyeDepth(pixels, depth):
     new_points = [(x[i], y[i]) for i in range(len(x))]
     for point in new_points:
         res.append(round(depth[int(point[1])][int(point[0])], 3))
-        cv.circle(depth, (int(point[1]), int(point[0])), radius=1, color=(255, 255, 255), thickness=3)
+        cv.circle(depth, (int(point[0]), int(point[1])), radius=1, color=(255, 255, 255), thickness=3)
 
     median=np.median(res)
     average=np.average(res)
@@ -74,42 +74,90 @@ def Undistort(imgL,imgR,cameraMatrixL, distL, intrinsicL, cameraMatrixR, distR, 
 
     return imgLres, imgRres
 
-def Disparity(imgL,imgR):
+def Disparity(imgL,imgR, processing_unit):
     # We compute the depth and disparity map
-    minDisparity = 24
-    numDisparities = 192
-    blockSize = 1
-    disp12MaxDiff = 256
-    uniquenessRatio = 2
-    speckleWindowSize = 200
-    speckleRange = 32
+    
+    if processing_unit =="gpu" or processing_unit =="Gpu":
+        numDisparities = 64
+        uniquenessRatio = 5
+        minDisparity = 1
+        blockSize = 3
+        stereo_bm_cuda = cv.cuda.createStereoBM(numDisparities=numDisparities,
+                                                    blockSize=blockSize)
+        stereo_bp_cuda = cv.cuda.createStereoBeliefPropagation(ndisp=numDisparities)
+        stereo_bcp_cuda = cv.cuda.createStereoConstantSpaceBP(minDisparity)
+        stereo_sgm_cuda = cv.cuda.createStereoSGM(minDisparity=minDisparity,
+                                    numDisparities=numDisparities,
+                                    P1=7,
+                                    P2=86,
+                                    uniquenessRatio=uniquenessRatio,
+                                    mode=cv.STEREO_SGBM_MODE_HH4)
+        
+        grayLeft = cv.cvtColor(imgL, cv.COLOR_BGR2GRAY)
+        grayRight = cv.cvtColor(imgR, cv.COLOR_BGR2GRAY)
+        left_cuda = cv.cuda_GpuMat()
+        left_cuda.upload(grayLeft)
+        
+        right_cuda = cv.cuda_GpuMat()
+        right_cuda.upload(grayRight)
 
-    stereo = cv.StereoSGBM_create(minDisparity=minDisparity,
-                                  numDisparities=numDisparities,
-                                  blockSize=blockSize,
-                                  P1=2*3*blockSize,
-                                  P2=32*3*blockSize,
-                                  disp12MaxDiff=disp12MaxDiff,
-                                  uniquenessRatio=uniquenessRatio,
-                                  speckleWindowSize=speckleWindowSize,
-                                  speckleRange=speckleRange,
-                                  preFilterCap=32,
-                                  mode=cv.STEREO_SGBM_MODE_SGBM)
+        disparity_sgm_cuda_2 = cv.cuda_GpuMat()
+        disparity_sgm_cuda_1 = stereo_sgm_cuda.compute(left_cuda,
+                                                    right_cuda,
+                                                    disparity_sgm_cuda_2)
+        disparity = disparity_sgm_cuda_1.download()
+    else :
+        minDisparity = 24
+        numDisparities = 192
+        blockSize = 1
+        disp12MaxDiff = 256
+        uniquenessRatio = 2
+        speckleWindowSize = 200
+        speckleRange = 32
 
-    disparity = stereo.compute(imgL, imgR)
+        stereo = cv.StereoSGBM_create(minDisparity=minDisparity,
+                                    numDisparities=numDisparities,
+                                    blockSize=blockSize,
+                                    P1=2*3*blockSize,
+                                    P2=32*3*blockSize,
+                                    disp12MaxDiff=disp12MaxDiff,
+                                    uniquenessRatio=uniquenessRatio,
+                                    speckleWindowSize=speckleWindowSize,
+                                    speckleRange=speckleRange,
+                                    preFilterCap=32,
+                                    mode=cv.STEREO_SGBM_MODE_SGBM)
+
+        disparity = stereo.compute(imgL, imgR)
+
     normalized = cv.normalize(disparity, None,1, 255, norm_type=cv.NORM_MINMAX)
     normalized = np.uint8(normalized)
     cv.imwrite("./result/disparity.jpg", normalized)
     return disparity
+    
+    # stereoCuda = cv.cuda.createStereoBM(numDisparities=numDisparities, blockSize=blockSize)
+    # imgL = cv.cvtColor(imgL, cv.COLOR_BGR2GRAY)
+    # imgR = cv.cvtColor(imgR, cv.COLOR_BGR2GRAY)
+
+    # imgLCuda = cv.cuda_GpuMat()
+    # imgRCuda = cv.cuda_GpuMat()
+    # imgLCuda.upload(imgL)
+    # imgRCuda.upload(imgR)
+    
+    # disparity = stereoCuda.compute(imgLCuda, imgRCuda, None)
+    # disparity = disparity.download()
+    # normalized = cv.normalize(disparity, None,1, 255, norm_type=cv.NORM_MINMAX)
+    # normalized = np.uint8(normalized)
+    # cv.imwrite("./result/disparity.jpg", normalized)
+    # return normalized
 
 def Depth(disparity, cameraMatrixL, leftEyePixels, rightEyePixels):
     # We compute the depth map
     f = cameraMatrixL[0, 0]
-    depth = (f*60) / cv.blur(disparity, (10, 10))
+    depth = (f*60) /cv.blur(disparity, (10, 10))
     # depth = np.clip(depth, 10, 60)
     normalized = cv.normalize(depth, None,1, 255, norm_type=cv.NORM_MINMAX)
     normalized = np.uint8(normalized)
-
+    normalized_eyes = normalized.copy()
     st = time.time()
     distLeftEye = CalculateEyeDepth(leftEyePixels,depth)
     distRightEye = CalculateEyeDepth(rightEyePixels,depth)
@@ -118,23 +166,23 @@ def Depth(disparity, cameraMatrixL, leftEyePixels, rightEyePixels):
     print("Time to calculate depth for each eyes in seconds ", et - st)
     font = cv.FONT_HERSHEY_SIMPLEX
 
-    cv.putText(depth, 'left eye : ' + str(round(distLeftEye, 3)) + " cm", (10,450), font, 1, (0, 255, 0), 2, cv.LINE_AA)
-    cv.putText(depth, 'right eye : ' + str(round(distRightEye, 3)) + " cm", (10,500), font, 1, (0, 255, 0), 2, cv.LINE_AA)
-    cv.putText(depth, 'average : ' + str(round(0.5*(distLeftEye+distRightEye), 3)) + " cm", (10,550), font, 1, (0, 255, 0), 2, cv.LINE_AA)
+    cv.putText(normalized_eyes, 'left eye : ' + str(round(distLeftEye, 3)) + " cm", (10,450), font, 1, (0, 255, 0), 2, cv.LINE_AA)
+    cv.putText(normalized_eyes, 'right eye : ' + str(round(distRightEye, 3)) + " cm", (10,500), font, 1, (0, 255, 0), 2, cv.LINE_AA)
+    cv.putText(normalized_eyes, 'average : ' + str(round(0.5*(distLeftEye+distRightEye), 3)) + " cm", (10,550), font, 1, (0, 255, 0), 2, cv.LINE_AA)
 
     cv.imwrite("./result/depth.jpg", normalized)
-    cv.imwrite("./result/depthWithEyes.jpg", depth)
-    return depth
+    cv.imwrite("./result/depthWithEyes.jpg", normalized_eyes)
+    return normalized
 
 
-def CalculateDepth(img, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR, leftEyePixels, rightEyePixels):
+def CalculateDepth(img, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR, leftEyePixels, rightEyePixels, processing_unit):
     imgL = img[:, :int(len(img[0])/2)]
     imgR = img[:, int(len(img[0])/2):]
 
     imgL, imgR = Undistort(imgL,imgR,cameraMatrixL, distL, intrinsicL, cameraMatrixR, distR, intrinsicR)
-
+    
     st = time.time()
-    disparity = Disparity(imgL, imgR)
+    disparity = Disparity(imgL, imgR, processing_unit)
     et = time.time()
 
     print("Time to caculate disparity map in seconds ", et - st)
