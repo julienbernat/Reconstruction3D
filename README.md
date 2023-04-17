@@ -13,6 +13,8 @@ opencv -> 4.5.1
 - numpy (1.21.6)
 - mediapipe
 
+## Lancer le projet
+
 Le fichier Main.py roule le projet pour une seule image que vous pouvez spécifier directement dans la ligne de commande.
 Voici un exemple pour lancer le projet avec l'image Center38cm.png
 ```
