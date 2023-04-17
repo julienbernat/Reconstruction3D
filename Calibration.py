@@ -51,7 +51,7 @@ def CalibrateCamera():
 
             # Add 2d image points of the chessboard corners
             objPtsR.append(coord)
-            cv.cornerSubPix(grayR, cornersR, (2, 2), (-1, -1), criteria)
+            cv.cornerSubPix(grayR, cornersR, (11, 11), (-1, -1), criteria)
             imgPtsR.append(cornersR)
             cv.drawChessboardCorners(imgR, cbSize, cornersR, retR)
         cv.imwrite("./ChessboardCorners/ChessboardCorners"+str(i)+".jpg", cv.hconcat([imgL, imgR]))

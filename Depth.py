@@ -3,6 +3,12 @@ import cv2 as cv
 import time
 import matplotlib.pyplot as plt
 
+# Colors
+GREEN = (0, 255, 0)
+RED = (0, 0, 255)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
 class Formatter(object):
     def __init__(self, im):
         self.im = im
@@ -74,13 +80,13 @@ def Undistort(imgL,imgR,cameraMatrixL, distL, intrinsicL, cameraMatrixR, distR, 
 
     return imgLres, imgRres
 
-def Disparity(imgL,imgR, processing_unit):
+def Disparity(imgL, imgR, processing_unit):
     # We compute the depth and disparity map
     
     if processing_unit =="gpu" or processing_unit =="Gpu":
         numDisparities = 64
-        uniquenessRatio = 5
-        minDisparity = 1
+        uniquenessRatio = 1
+        minDisparity = 24
         blockSize = 3
         stereo_bm_cuda = cv.cuda.createStereoBM(numDisparities=numDisparities,
                                                     blockSize=blockSize)
@@ -108,7 +114,7 @@ def Disparity(imgL,imgR, processing_unit):
         disparity = disparity_sgm_cuda_1.download()
     else :
         minDisparity = 24
-        numDisparities = 192
+        numDisparities = 112
         blockSize = 1
         disp12MaxDiff = 256
         uniquenessRatio = 2
@@ -129,68 +135,61 @@ def Disparity(imgL,imgR, processing_unit):
 
         disparity = stereo.compute(imgL, imgR)
 
-    normalized = cv.normalize(disparity, None,1, 255, norm_type=cv.NORM_MINMAX)
+    normalized = cv.normalize(disparity, None, 1, 255, norm_type=cv.NORM_MINMAX)
     normalized = np.uint8(normalized)
     cv.imwrite("./result/disparity.jpg", normalized)
     return disparity
-    
-    # stereoCuda = cv.cuda.createStereoBM(numDisparities=numDisparities, blockSize=blockSize)
-    # imgL = cv.cvtColor(imgL, cv.COLOR_BGR2GRAY)
-    # imgR = cv.cvtColor(imgR, cv.COLOR_BGR2GRAY)
 
-    # imgLCuda = cv.cuda_GpuMat()
-    # imgRCuda = cv.cuda_GpuMat()
-    # imgLCuda.upload(imgL)
-    # imgRCuda.upload(imgR)
-    
-    # disparity = stereoCuda.compute(imgLCuda, imgRCuda, None)
-    # disparity = disparity.download()
-    # normalized = cv.normalize(disparity, None,1, 255, norm_type=cv.NORM_MINMAX)
-    # normalized = np.uint8(normalized)
-    # cv.imwrite("./result/disparity.jpg", normalized)
-    # return normalized
-
-def Depth(disparity, cameraMatrixL, leftEyePixels, rightEyePixels):
+def Depth(disparity, cameraMatrixL, leftEyePixels, rightEyePixels, imgL):
     # We compute the depth map
     f = cameraMatrixL[0, 0]
-    depth = (f*60) /cv.blur(disparity, (10, 10))
+    depth = ((f*60) / cv.blur(disparity, (10, 10))).astype(np.uint8)
+    depth = cv.bilateralFilter(depth, 15, 75, 75)
     # depth = np.clip(depth, 10, 60)
-    normalized = cv.normalize(depth, None,1, 255, norm_type=cv.NORM_MINMAX)
+    normalized = cv.normalize(depth, None, 1, 255, norm_type=cv.NORM_MINMAX)
     normalized = np.uint8(normalized)
-    normalized_eyes = normalized.copy()
-    st = time.time()
-    distLeftEye = CalculateEyeDepth(leftEyePixels,depth)
-    distRightEye = CalculateEyeDepth(rightEyePixels,depth)
-    et = time.time()
+    
+    left = []
+    for x, y in leftEyePixels:
+        left.append(depth[x][y])
+    
+    medianLeft =np.median(left)
+    right = []
+    for x, y in rightEyePixels:
+        right.append(depth[x][y])
+    medianRight = np.median(right)
+    # st = time.time()
+    # distLeftEye = CalculateEyeDepth(leftEyePixels, depth)
+    # distRightEye = CalculateEyeDepth(rightEyePixels, depth)
+    # et = time.time()
+    # print("Time to calculate depth for each eyes in seconds ", et - st)
 
-    print("Time to calculate depth for each eyes in seconds ", et - st)
     font = cv.FONT_HERSHEY_SIMPLEX
-
-    cv.putText(normalized_eyes, 'left eye : ' + str(round(distLeftEye, 3)) + " cm", (10,450), font, 1, (0, 255, 0), 2, cv.LINE_AA)
-    cv.putText(normalized_eyes, 'right eye : ' + str(round(distRightEye, 3)) + " cm", (10,500), font, 1, (0, 255, 0), 2, cv.LINE_AA)
-    cv.putText(normalized_eyes, 'average : ' + str(round(0.5*(distLeftEye+distRightEye), 3)) + " cm", (10,550), font, 1, (0, 255, 0), 2, cv.LINE_AA)
-
+    cv.putText(imgL, f"left eye : {round(medianLeft, 3)} cm", (30, 35), font, 0.6, BLACK, 2)
+    cv.putText(imgL, f"right eye : {round(medianRight, 3)} cm", (30, 60), font, 0.6, BLACK, 2)
+    cv.putText(imgL, f"average : {round(0.5*(medianLeft+medianRight), 3)} cm", (30, 85), font, 0.6, BLACK, 2)
     cv.imwrite("./result/depth.jpg", normalized)
-    cv.imwrite("./result/depthWithEyes.jpg", normalized_eyes)
-    return normalized
+    cv.imwrite("./result/depthWithEyes.jpg", imgL)
+        
+    return normalized, imgL
 
 
-def CalculateDepth(img, intrinsicL, cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR, leftEyePixels, rightEyePixels, processing_unit):
+def CalculateDepth(img, intrinsicL,cameraMatrixL, intrinsicR, cameraMatrixR, distL, distR, leftEyePixels, rightEyePixels, processing_unit):
     imgL = img[:, :int(len(img[0])/2)]
     imgR = img[:, int(len(img[0])/2):]
-
-    imgL, imgR = Undistort(imgL,imgR,cameraMatrixL, distL, intrinsicL, cameraMatrixR, distR, intrinsicR)
     
-    st = time.time()
+    #imgL, imgR = Undistort(imgL,imgR,cameraMatrixL, distL, intrinsicL, cameraMatrixR, distR, intrinsicR)
+    
+    # st = time.time()
     disparity = Disparity(imgL, imgR, processing_unit)
-    et = time.time()
+    # et = time.time()
 
-    print("Time to caculate disparity map in seconds ", et - st)
-    depth = Depth(disparity, cameraMatrixL, leftEyePixels, rightEyePixels)
+    # print("Time to caculate disparity map in seconds ", et - st)
+    depth, imgWithDistance = Depth(disparity, cameraMatrixL, leftEyePixels, rightEyePixels, imgL)
 
     # fig, ax = plt.subplots()
     # im = ax.imshow(depth, interpolation='none')
     # ax.format_coord = Formatter(im)
     # plt.show()
 
-    return depth
+    return depth, imgWithDistance

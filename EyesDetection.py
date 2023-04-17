@@ -15,11 +15,10 @@ def eyesDetection(img):
     
     imgL = img[:, :int(len(img[0])/2)]
     imgR = img[:, int(len(img[0])/2):]
-
     # LEFT IMAGE
     ih, iw, ic = imgL.shape
     faceMeshSolution = mp.solutions.face_mesh
-    faceMesh = faceMeshSolution.FaceMesh(max_num_faces=1) # 2 faces because of 2 cameras..
+    faceMesh = faceMeshSolution.FaceMesh(max_num_faces=1)
     results = faceMesh.process(imgL)
 
     if results.multi_face_landmarks:
@@ -40,7 +39,7 @@ def eyesDetection(img):
     # LEFT IMAGE
     ih, iw, ic = imgR.shape
     faceMeshSolution = mp.solutions.face_mesh
-    faceMesh = faceMeshSolution.FaceMesh(max_num_faces=1) # 2 faces because of 2 cameras..
+    faceMesh = faceMeshSolution.FaceMesh(max_num_faces=1)
     results = faceMesh.process(imgR)
 
     if results.multi_face_landmarks:
